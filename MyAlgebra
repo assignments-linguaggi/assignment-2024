@@ -1,0 +1,40 @@
+ool runOnBasicBlockAlgebra(BasicBlock &B) {
+
+   std::vector<Instruction*> daEliminare;
+    int ElementoNeutro = 2;
+    for (Instruction &iter : B){
+      //Controllo elemento neutro somma
+        if(iter.getOpcode() == Instruction::Add){
+            if(ConstantInt *C = dyn_cast<ConstantInt>(iter.getOperand(0))){ //è una costante, se si è zero? primo operando
+              if(C->getValue().isZero()){
+                ElementoNeutro=0;
+              }
+            }else if(ConstantInt *C = dyn_cast<ConstantInt>(iter.getOperand(1))){//è una costante, se si è zero? secondo operando
+              if(C->getValue().isZero()){
+                ElementoNeutro=1;
+              }
+            }          
+          }
+          if(iter.getOpcode() == Instruction::Mul){
+            if(ConstantInt *C = dyn_cast<ConstantInt>(iter.getOperand(0))){//è una costante, se si è zero? primo operando
+              if(C->getValue().isOne()){
+                ElementoNeutro=0;
+              }
+            }else if(ConstantInt *C = dyn_cast<ConstantInt>(iter.getOperand(1))){//è una costante, se si è zero? secondo operando
+              if(C->getValue().isOne()){
+                ElementoNeutro=1;
+              }
+            }               
+          }
+          if(ElementoNeutro != 2){
+            iter.replaceAllUsesWith(iter.getOperand(1-ElementoNeutro));
+            daEliminare.push_back(&iter);
+            printf("Sostituzione avvenuta con successo\n");        
+          } 
+        
+    };
+    for(int i=0; i < daEliminare.size(); i++){
+      daEliminare[i]->eraseFromParent();
+    }
+  return true;
+}
