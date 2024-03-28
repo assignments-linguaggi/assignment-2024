@@ -11,17 +11,16 @@ bool runOnBasicBlock(BasicBlock &B) {
         Instruction *Inst = &(*I);
         if (BinaryOperator *op = dyn_cast<BinaryOperator>(Inst)) {
             //Controlli per addizione e moltiplicazione
-            if ((op->getOpcode() == Instruction::Add && //somma 
-                isa<ConstantInt>(op->getOperand(1)) && //verifica che il secondo operando sia una costante (il template isa<> è come in java instanceof)
-                cast<ConstantInt>(op->getOperand(1))->isZero()) //verifica che sia uguale a 0
-                || 
-                (op->getOpcode() == Instruction::Mul && //mult
-                isa<ConstantInt>(op->getOperand(1)) && 
-                cast<ConstantInt>(op->getOperand(1))->isOne())) { //verifica che sia uguale a 1
-                    op->replaceAllUsesWith(op->getOperand(0)); //rimpiazzo gli usi dell'istruzione con il primo operando
-                    op->eraseFromParent(); // rimuovo l'istruzione dal BB
-                    return true;
-            }
+        if (((op->getOpcode() == Instruction::Add || op->getOpcode() == Instruction::Mul) && // Considera sia l'addizione che la moltiplicazione
+            isa<ConstantInt>(op->getOperand(1)) && 
+            cast<ConstantInt>(op->getOperand(1))->isZero()) 
+            ||
+            (isa<ConstantInt>(op->getOperand(0)) &&  // Controlla anche il primo operando
+            cast<ConstantInt>(op->getOperand(0))->isZero())) { 
+                op->replaceAllUsesWith(op->getOperand(0)); 
+                op->eraseFromParent(); 
+                return true;
+        }
         }
     }
     return false;
