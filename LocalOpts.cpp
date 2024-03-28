@@ -10,7 +10,7 @@ bool runOnBasicBlock(BasicBlock &B) {
     for (auto I = B.begin(), E = B.end(); I != E; ++I) { //Itero sulle istruzioni del BB
         Instruction *Inst = &(*I);
         if (BinaryOperator *op = dyn_cast<BinaryOperator>(Inst)) {
-            //Controlli per addizione e moltiplicazione
+            //Controlli per add e molt
         if (((op->getOpcode() == Instruction::Add || op->getOpcode() == Instruction::Mul) && // Considera sia l'addizione che la moltiplicazione
             isa<ConstantInt>(op->getOperand(1)) && 
             cast<ConstantInt>(op->getOperand(1))->isZero()) 
