@@ -1,4 +1,4 @@
-ool runOnBasicBlockAlgebra(BasicBlock &B) {
+bool runOnBasicBlockAlgebra(BasicBlock &B) {
 
    std::vector<Instruction*> daEliminare;
     int ElementoNeutro = 2;
