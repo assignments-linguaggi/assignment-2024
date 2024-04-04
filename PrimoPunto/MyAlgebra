@@ -1,8 +1,9 @@
 bool runOnBasicBlockAlgebra(BasicBlock &B) {
 
    std::vector<Instruction*> daEliminare;
-    int ElementoNeutro = 2;
+    int ElementoNeutro;
     for (Instruction &iter : B){
+      ElementoNeutro = 2;
       //Controllo elemento neutro somma
         if(iter.getOpcode() == Instruction::Add){
             if(ConstantInt *C = dyn_cast<ConstantInt>(iter.getOperand(0))){ //è una costante, se si è zero? primo operando
@@ -33,8 +34,8 @@ bool runOnBasicBlockAlgebra(BasicBlock &B) {
           } 
         
     };
-    for(int i=0; i < daEliminare.size(); i++){
-      daEliminare[i]->eraseFromParent();
-    }
+    for(Instruction *i: daEliminare)
+      i->eraseFromParent();
+
   return true;
 }
