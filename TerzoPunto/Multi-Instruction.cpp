@@ -121,3 +121,27 @@ bool runOnBasicBlockMulti(BasicBlock &B) {
 
     return true;
   }
+
+bool runOnFunction(Function &F) {
+    bool Trasformato = false;
+    for (auto &BB : F) {
+        if (runOnBasicBlockMulti(BB)) {
+            Trasformato = true;
+        }
+    }
+    return Trasformato;
+}
+
+PreservedAnalyses LocalOpts::run(Module &M, ModuleAnalysisManager &AM) {
+    bool Cambiato = false;
+    for (auto &F : M) {
+        if (runOnFunction(F)) {
+            Cambiato = true;
+        }
+    }
+    if (Cambiato) {
+        return PreservedAnalyses::none();
+    } else {
+        return PreservedAnalyses::all();
+    }
+}
