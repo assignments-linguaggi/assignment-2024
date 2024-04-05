@@ -24,6 +24,14 @@ bool isAlgebric(unsigned tipoistr){
 
   return false;
 }
+
+//controllo che l'istruzione sia una moltiplicazione o una divisione (signed/unsigned)
+bool ottimizzabileConSR(const Instruction& instr) 
+{
+    return instr.getOpcode() == Instruction::Mul || instr.getOpcode() == Instruction::UDiv || instr.getOpcode() == Instruction::SDiv;
+}
+
+
 //controllo che la seconda istruzione sia del "tipo" opposto della prima: add - sub; mul - Sdiv
 bool isOpOpposta(unsigned primaInstr, unsigned secondaInstr){
   bool risposta = false;
@@ -121,6 +129,74 @@ bool runOnBasicBlockMulti(BasicBlock &B) {
     return true;
 }
 
+bool runOnBasicBlockSR(BasicBlock &B) {
+    std::vector<std::pair<Instruction*, Value*>> istrDaCambiare; //vettore di coppie <istruzione / valore >
+    bool Trasformato = false;
+
+    for (auto& Inst : B) { //itero sulle istruzioni del BB
+        if (ottimizzabileConSR(Inst)) {
+            Value* primoOperando = Inst.getOperand(0);
+            Value* secondoOperando = Inst.getOperand(1);
+            
+            //(es a = b * 5)
+            Value* operando = primoOperando;
+            ConstantInt* constante = dyn_cast<ConstantInt>(secondoOperando);
+            //se il secondo operando non è costante scambio (es: a = 5 * b)
+            if (constante == nullptr && Inst.isCommutative()) {
+                operando = secondoOperando;
+                constante = dyn_cast<ConstantInt>(primoOperando);
+            }
+            // se non ci sono costanti l'ottimizzazione SR non continua
+            if (constante != nullptr) {
+                APInt constVal = constante->getValue();
+                //controllo diretto per potenze di due
+                if (constVal.isPowerOf2()) {
+                    IRBuilder<> builder(&Inst); 
+                    ConstantInt* shiftAmount = ConstantInt::get(constante->getType(), constVal.logBase2());
+                    Value* istrShift = nullptr;
+
+                    if (Inst.getOpcode() == Instruction::Mul) {
+                    // Se l'istruzione è una moltiplicazione, creiamo uno shift a sx
+                        istrShift = builder.CreateShl(operando, shiftAmount, "shl"); 
+                    } else {
+                    // Se l'istruzione è una moltiplicazione, creiamo uno shift a dx
+                        istrShift = builder.CreateAShr(operando, shiftAmount, "shr"); 
+                    }
+                    istrDaCambiare.push_back(std::make_pair(&Inst, istrShift));
+                
+                } else if (Inst.getOpcode() == Instruction::Mul) {
+                    unsigned int nearestLog2Val = constVal.nearestLogBase2();
+                    if (constVal == (1 << nearestLog2Val) - 1) {
+                        //Ramo per costante uguale a potenza di due -1
+                        IRBuilder<> builder(&Inst);
+                        ConstantInt* shiftAmount = ConstantInt::get(constante->getType(), nearestLog2Val);
+                        Value* istrShift = builder.CreateShl(operando, shiftAmount, "shl");
+                        Value* istrSub = builder.CreateSub(istrShift, operando, "sub");
+                        istrDaCambiare.push_back(std::make_pair(&Inst, istrSub));
+                    } else if (constVal == (1 << nearestLog2Val) + 1) {
+                        //Ramo per costante uguale a potenza di due + 1 
+                        IRBuilder<> builder(&Inst);
+                        ConstantInt* shiftAmount = ConstantInt::get(constante->getType(), nearestLog2Val);
+                        Value* istrShift = builder.CreateShl(operando, shiftAmount, "shl");
+                        Value* istrAdd = builder.CreateAdd(istrShift, operando, "add");
+                        istrDaCambiare.push_back(std::make_pair(&Inst, istrAdd));
+                    }
+                }
+            }
+        }
+    }
+    //cambio tutte le istruzioni che ho salvato nel vector 
+    for (auto& pair : istrDaCambiare) {
+        Instruction* oldInst = pair.first;
+        Value* newInst = pair.second;
+        oldInst->replaceAllUsesWith(newInst);
+        oldInst->eraseFromParent();
+        Trasformato = true;
+    }
+
+    return Trasformato;
+}
+
 bool runOnBasicBlockAlgebra(BasicBlock &B) {
 
    std::vector<Instruction*> daEliminare;
@@ -165,21 +241,21 @@ bool runOnBasicBlockAlgebra(BasicBlock &B) {
 
 bool runOnFunction(Function &F) {
   bool Transformed = false;
-  int scelta = 2;
-  for (auto Iter = F.begin(); Iter != F.end(); ++Iter) {
+  int scelta = 3;
+  for (auto &BB : F) {
     switch(scelta){
       case(1):
-        if (runOnBasicBlockMulti(*Iter)) 
+        if (runOnBasicBlockMulti(BB)) 
           Transformed = true;
         break;
       case(2):
-        if (runOnBasicBlockAlgebra(*Iter)) 
+        if (runOnBasicBlockAlgebra(BB)) 
           Transformed = true;
         break;
-      /*case(3):
-        if (runOnBasicBlockStrenght(*Iter)) 
+      case(3):
+        if (runOnBasicBlockSR(BB)) 
           Transformed = true;
-        break;*/
+        break;
     }
   }
 
@@ -194,4 +270,3 @@ PreservedAnalyses LocalOpts::run(Module &M,
   
   return PreservedAnalyses::all();
 }
-
