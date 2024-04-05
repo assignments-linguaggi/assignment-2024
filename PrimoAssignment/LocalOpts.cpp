@@ -41,7 +41,7 @@ bool isOpOpposta(unsigned primaInstr, unsigned secondaInstr){
 
 bool runOnBasicBlockMulti(BasicBlock &B) {
 
-   std::vector<Instruction*> daEliminare;
+    std::vector<Instruction*> daEliminare;
     int COnst1, numeroConst, valoreIntero, Const2;
     numeroConst = 0;
     Value* operatore0;
@@ -52,7 +52,7 @@ bool runOnBasicBlockMulti(BasicBlock &B) {
 
     for (Instruction &iter : B){
       COnst1 = -1;
-      numeroConst = 0; //indica se c'è un numero e un operando,indica il numero di costanti
+      numeroConst = 0; //indica se c'è un numero e un operando
       tipoistr = iter.getOpcode();
       //Controllo elemento neutro somma/sottrazione
       if(isAlgebric(tipoistr)){
@@ -63,26 +63,23 @@ bool runOnBasicBlockMulti(BasicBlock &B) {
           //Controllo gli operandi, seleziono il valore numerico se c'è e preparo un puntatore
           //opRegistro al registro da utilizzare dopo se un operatore è un numero e l'altro è un registro
           //trovo l'operando che è una costante
-          if(ConstantInt *C = dyn_cast<ConstantInt>(iter.getOperand(0))){
+          if(ConstantInt *C = dyn_cast<ConstantInt>(iter.getOperand(0))){ //è operando 0 una costante?
             COnst1=0;
-            valoreIntero= C->getSExtValue(); //long int o unsigned int 
-            opRegistro=operatore1;
-
+            valoreIntero= C->getSExtValue(); //long int o unsigned int  
+            opRegistro=operatore1; // puntatore alla variabile-registro andando a esclusione
             numeroConst++;
           }else if(ConstantInt *C = dyn_cast<ConstantInt>(iter.getOperand(1))){
             COnst1=1;
             valoreIntero= C->getSExtValue();
             opRegistro=operatore0;
-            
             numeroConst++;
           }
         
-        //Controllo ci sia un numerico e un registro altrimenti non faccio nulla
+        //Controllo ci sia una e una variabile e una costante altrimenti non faccio nulla
         if(numeroConst != 1)
           continue;
         else{
-          //Solo uno dei due è numerico, ora devo controllare tutti i suoi utilizzatori
-          
+          //Controllo tutti i suoi utilizzatori
           if(Instruction* I = &iter){
             for(auto uso = I->user_begin(); uso != I->user_end(); ++uso){
               //for per prendere gli utilizzatori, Usando Instruction mi da errore perchè user è un value
@@ -95,12 +92,14 @@ bool runOnBasicBlockMulti(BasicBlock &B) {
                 /*Devo controllare se l'istruzione ha un operando numerico, e nel caso se è lo stesso
                   intero dell'uso di riferimento*/
                 if(isOpOpposta(I->getOpcode(),userInst->getOpcode())){
+                  //se sono operazione opposte allora controllo gli operandi
                   if(ConstantInt *C = dyn_cast<ConstantInt>(userInst->getOperand(0))){
                     Const2=0;
                   }else if(ConstantInt *C = dyn_cast<ConstantInt>(userInst->getOperand(1))){
                     Const2=1;
                   }
                   if(Const2 != -1){
+                    //se costante della prima istruzione analizzata è uguale nella operazione opposta del suo utilizzatore allora replace
                     if(I->getOperand(COnst1) == userInst->getOperand(Const2)){
 
                       userInst->replaceAllUsesWith(opRegistro);
@@ -129,7 +128,7 @@ bool runOnBasicBlockAlgebra(BasicBlock &B) {
     for (Instruction &iter : B){
       ElementoNeutro = 2;
       //Controllo elemento neutro somma
-        if(iter.getOpcode() == Instruction::Add){
+        if(iter.getOpcode() == Instruction::Add){ //se è una somma
             if(ConstantInt *C = dyn_cast<ConstantInt>(iter.getOperand(0))){ //è una costante, se si è zero? primo operando
               if(C->getValue().isZero()){
                 ElementoNeutro=0;
@@ -140,7 +139,7 @@ bool runOnBasicBlockAlgebra(BasicBlock &B) {
               }
             }          
           }
-          if(iter.getOpcode() == Instruction::Mul){
+          if(iter.getOpcode() == Instruction::Mul){//analogo a prima ma con la moltiplicazione
             if(ConstantInt *C = dyn_cast<ConstantInt>(iter.getOperand(0))){//è una costante, se si è zero? primo operando
               if(C->getValue().isOne()){
                 ElementoNeutro=0;
@@ -152,9 +151,9 @@ bool runOnBasicBlockAlgebra(BasicBlock &B) {
             }               
           }
           if(ElementoNeutro != 2){
-            iter.replaceAllUsesWith(iter.getOperand(1-ElementoNeutro));
+            iter.replaceAllUsesWith(iter.getOperand(1-ElementoNeutro)); //rimpiazzo con i suoi users l'indirizzo in questione
             daEliminare.push_back(&iter);
-            printf("Sostituzione avvenuta con successo\n");        
+            //printf("Sostituzione avvenuta con successo\n");        
           } 
         
     };
