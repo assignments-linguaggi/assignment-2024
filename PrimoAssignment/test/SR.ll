@@ -1,11 +1,12 @@
-; int foo2(int e, int a) {
-;   a = b + 1
-;   c = a - 1
+; int SR(int e, int b) {
+;   int a = b + 1;
+;   int c = a - 1
 ;   b = e << 1;
 ;   int d = b / 4;
 ;   return c * d;
 ; }
 ; %3 = a / %1 = b / %4 = c
+
 define dso_local i32 @foo2(i32 noundef %0, i32 noundef %1) #0 {
   %3 = add nsw i32 %1, 1
   %4 = sub nsw i32 %3, 1
