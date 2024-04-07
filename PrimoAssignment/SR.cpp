@@ -1,16 +1,21 @@
-#include "llvm/Transforms/Utils/LocalOpts.h"
+#include "llvm/Transforms/Utils/SR.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/InstrTypes.h"
+#include <llvm/IR/Constants.h>
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "cmath"
+#include "vector"
 
 using namespace llvm;
 
-static bool ottimizzabileConSR(const Instruction& instr)
+//controllo che l'istruzione sia una moltiplicazione o una divisione (signed/unsigned)
+bool ottimizzabileConSR(const Instruction& instr) 
 {
     return instr.getOpcode() == Instruction::Mul || instr.getOpcode() == Instruction::UDiv || instr.getOpcode() == Instruction::SDiv;
 }
 
-bool runOnBasicBlock(BasicBlock &B) {
+
+bool runOnBasicBlockSR(BasicBlock &B) {
     std::vector<std::pair<Instruction*, Value*>> istrDaCambiare; //vettore di coppie <istruzione / valore >
     bool Trasformato = false;
 
@@ -40,7 +45,7 @@ bool runOnBasicBlock(BasicBlock &B) {
                     // Se l'istruzione è una moltiplicazione, creiamo uno shift a sx
                         istrShift = builder.CreateShl(operando, shiftAmount, "shl"); 
                     } else {
-                    // Se l'istruzione è una moltiplicazione, creiamo uno shift a dx
+                    // Se l'istruzione è una divisione, creiamo uno shift a dx
                         istrShift = builder.CreateAShr(operando, shiftAmount, "shr"); 
                     }
                     istrDaCambiare.push_back(std::make_pair(&Inst, istrShift));
@@ -78,27 +83,3 @@ bool runOnBasicBlock(BasicBlock &B) {
     return Trasformato;
 }
 
-
-bool runOnFunction(Function &F) {
-    bool Trasformato = false;
-    for (auto &BB : F) {
-        if (runOnBasicBlock(BB)) {
-            Trasformato = true;
-        }
-    }
-    return Trasformato;
-}
-
-PreservedAnalyses LocalOpts::run(Module &M, ModuleAnalysisManager &AM) {
-    bool Cambiato = false;
-    for (auto &F : M) {
-        if (runOnFunction(F)) {
-            Cambiato = true;
-        }
-    }
-    if (Cambiato) {
-        return PreservedAnalyses::none();
-    } else {
-        return PreservedAnalyses::all();
-    }
-}
