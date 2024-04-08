@@ -8,13 +8,24 @@
 #include "llvm/IR/IRBuilder.h"
 #include "cmath"
 #include "vector"
-
+#include <iostream>
 
 using namespace llvm;
 
+void printOptTable () {
+    std::cout << "Numero\tOttimizzazione\n\n";
+    
+    std::cout << "1\tAlgebraic Identity\n";
+    std::cout << "2\tStrength reduction\n";
+    std::cout << "3\tMulti Instruction\n\n";
+    
+}
+
 bool runOnFunction(Function &F) {
   bool Transformed = false;
-  int scelta = 1;
+  int scelta = 0;
+  printOptTable();
+  std::cin >> scelta;
   for (auto &BB : F) {
     switch(scelta){
       case(1):
