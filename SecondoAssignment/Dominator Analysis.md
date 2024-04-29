@@ -13,7 +13,7 @@ Per definizione un nodo domina sé stesso
 | **Direction**                 | Forward: $out[b] = f_b(in[b]), in[b] = (\wedge out[pred(b)])$                |
 | **Transfer Function**         | $f_b(x)=gen_b(\cup(x))$                                           |
 | **Meet Operation**            | $(\cap)$                                                                   |
-| **Boundary Condition**        | $out[entry]=(\{entry\})$                                                         |
+| **Boundary Condition**        | $out[entry]=(\{\})$                                                         |
 | **Initial Interior Points**   | $out[b]=U$                                                                |
 
 ## Soluzione secondo punto
