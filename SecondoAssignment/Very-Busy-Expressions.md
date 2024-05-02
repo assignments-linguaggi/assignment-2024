@@ -2,6 +2,7 @@
 ## Traccia
 <img style="width:20rem" src="./imgs/Screenshot 2024-04-29 alle 15.21.01.png" alt="">
 Per il programma riportato, già diviso in Basic Blocks, occorre:
+
  - Derivare una formalizzazione per il framework di Dataflow Analysis
  - Popolare una tabella con le iterazioni dell’algoritmo iterativo di soluzione del problema
 
