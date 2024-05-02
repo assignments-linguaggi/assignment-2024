@@ -13,7 +13,7 @@ Un’espressione è **very busy** in un punto p se, indipendentemente dal percor
 |-----------------------|-------------------------------------------------------------|
 |Domain   				|Sets of expressions										  |
 |Direction				|Forward: $out[b] = f_b(in[b]), in[b] = (\wedge out[pred(b)])$|
-|Transfer Function		|$f_b(x)=gen_b\cup(x-kill)$									  |
+|Transfer Function		|$f_b(x)=gen_b\cup(out[b]-kill(b))$									  |
 |Meet Operation			|$(\cap)$													  |
 |Boundary Condition		|$out[entry]=(\{\})$										  |
 |Initial Interior Points|$out[b]=U$													  |
