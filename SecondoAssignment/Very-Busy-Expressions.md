@@ -29,7 +29,7 @@ Un’espressione è **very busy** in un punto p se, indipendentemente dal percor
 |BB5	|y=b-a       |out[BB2]				           |{(b-a)}				          |
 |BB6	|a=0	        |out[BB5]				           |{(b-a)}		         		 |
 |BB7	|x=a-b	      |out[BB6]				           |{(b-a), (a-b)}	     	|
-|BB8	|exit	       |out[BB4]$\cup$ out[BB7]|{(b-a), (a-b)}	     	|
+|BB8	|exit	       |out[BB4] $\cup$ out[BB7]|{(b-a), (a-b)}	     	|
 
 
 
