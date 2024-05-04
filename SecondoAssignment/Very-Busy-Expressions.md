@@ -1,4 +1,5 @@
-﻿# Soluzione Esercizio 2
+
+# Soluzione Esercizio 2
 ## Traccia
 <img style="width:20rem" src="./imgs/Screenshot 2024-04-29 alle 15.21.01.png" alt="">
 Per il programma riportato, già diviso in Basic Blocks, occorre:
@@ -11,25 +12,35 @@ Un’espressione è **very busy** in un punto p se, indipendentemente dal percor
 ## Soluzione primo punto
 |  						               |Dataflow Problem 1 (VBE)									                            |
 |-----------------------|-------------------------------------------------------------|
-|Domain   				          |Sets of expressions										                                |
-|Direction				          |Forward: $out[b] = f_b(in[b]), in[b] = (\wedge out[pred(b)])$|
-|Transfer Function	    	|$f_b(x)=gen_b\cup(out[b]-kill(b))$								                 	 |
-|Meet Operation			      |$(\cap)$													                                        |
-|Boundary Condition	   	|$out[entry]=(\{\})$									                              	  |
-|Initial Interior Points|$out[b]=U$													                                      |
+|Domain   				          |insieme di espressioni									                                |
+|Direction				          |Indietro: $`in[b] = f_b(out[b]), out[b] = (\wedge in[next(b)])`$|
+|Transfer Function	    	|$f_b(x)=gen_b\cup(out[b]-kill_b)$								                 	 |
+|Meet Operation			      |$`(\cap)`$													                                        |
+|Boundary Condition	   	|$`in[exit]=\emptyset$									                              	  |
+|Initial Interior Points|$in[b]=U$													                                      |
 
 ## Soluzione secondo punto
 
-|Nome BB|Contenuto|Iterazione 1 - in[b]	  |Iterazione 1 - out[b]|
-|-------|---------|-----------------------|---------------------|
-|BB1	|entry	      |{}					                |{}				              	|
-|BB2	|(a!=b)?     |out[BB1]				           |{}					              |
-|BB3	|x=b-a       |out[BB2]				           |{(b-a)}				          |
-|BB4	|x=a-b       |out[BB3] 			           |{(b-a}, (a-b)}	     	|
-|BB5	|y=b-a       |out[BB2]				           |{(b-a)}				          |
-|BB6	|a=0	        |out[BB5]				           |{(b-a)}		         		 |
-|BB7	|x=a-b	      |out[BB6]				           |{(b-a), (a-b)}	     	|
-|BB8	|exit	       |out[BB4] $\cup$ out[BB7]|{(b-a), (a-b)}	     	|
+Saranno necessarie due iterazioni, in quanto cambiano gli out[b]
 
+| &nbsp; | in[b] | out[b] |
+| ------ | ----- | ------ |
+| BB1 (entry) | {(a!=b), (b-a)} | in[BB2]|
+| BB2 | {(a!=b), (b-a)} | in[BB3] $`\cap`$ in[BB5] = {(b-a)} |
+| BB3 | {(b-a), (a-b)} | in[BB4] |
+| BB4 | {(a-b)} | in[BB8] |
+| BB5 | {(b-a)} | in[BB6] |
+| BB6 | $`\emptyset`$ | in[BB7] |
+| BB7 | {(a-b)} | in[exit] |
+| BB8 (exit) | $`\emptyset`$ | $`\emptyset`$ |
 
-
+| &nbsp; | in[b] | out[b] |
+| ------ | ----- | ------ |
+| BB1 (entry) | {(a!=b), (b-a)} | in[BB2]|
+| BB2 | {(a!=b), (b-a)} | in[BB3] $`\cap`$ in[BB5] = {(b-a)} |
+| BB3 | {(b-a), (a-b)} | in[BB4] |
+| BB4 | {(a-b)} | in[BB8] |
+| BB5 | {(b-a)} | in[BB6] |
+| BB6 | $`\emptyset`$ | in[BB7] |
+| BB7 | {(a-b)} | in[exit] |
+| BB8 (exit) | $`\emptyset`$ | $`\emptyset`$ |
