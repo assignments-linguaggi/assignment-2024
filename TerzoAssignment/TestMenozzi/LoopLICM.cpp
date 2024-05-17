@@ -85,7 +85,7 @@ void LoopLICM::applyCodeMotion() {
             }
         }
 
-        /*bool dominatesUsers = true;
+        bool dominatesUsers = true;
         for (User *user : instr->users()) {
             if (Instruction *userInstr = dyn_cast<Instruction>(user)) {
                 BasicBlock *userBlock = userInstr->getParent();
@@ -94,7 +94,7 @@ void LoopLICM::applyCodeMotion() {
                     break;
                 }
             }
-        }*/
+        }
 
         bool isDeadAtExit = false;
         // Verifica se la variabile definita dall'istruzione è "dead" all'uscita del loop
@@ -110,7 +110,7 @@ void LoopLICM::applyCodeMotion() {
         }
 
         //if ((assignsToUnassigned && dominatesExits && dominatesUsers) || isDeadAtExit) {
-            if (assignsToUnassigned && (dominatesExits || isDeadAtExit)) {
+            if (assignsToUnassigned && (dominatesExits || isDeadAtExit)  && dominatesUsers ) {
             instr->moveBefore(preheader->getTerminator());
             movedInstructions.insert(instr);
         }
