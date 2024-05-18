@@ -1,4 +1,3 @@
-
 #include  "llvm/Transforms/Utils/LoopLICM.h"
 
 
@@ -96,21 +95,17 @@ void LoopLICM::applyCodeMotion() {
             }
         }
 
-        bool isDeadAtExit = false;
-        // Verifica se la variabile definita dall'istruzione è "dead" all'uscita del loop
-        if (dominatesExits) {
-            for (User *user : instr->users()) {
-                if (Instruction *userInstr = dyn_cast<Instruction>(user)) {
-                    if (!this->currentLoop->contains(userInstr)) {
-                        isDeadAtExit = true;
-                        break;
-                    }
+        bool isDeadAtExit = true;
+        for (User *user : instr->users()) {
+            if (Instruction *userInstr = dyn_cast<Instruction>(user)) {
+                if (this->currentLoop->contains(userInstr)) {
+                    isDeadAtExit = false;
+                    break;
                 }
             }
         }
 
-        //if ((assignsToUnassigned && dominatesExits && dominatesUsers) || isDeadAtExit) {
-            if (assignsToUnassigned && (dominatesExits || isDeadAtExit)  && dominatesUsers ) {
+        if ((assignsToUnassigned && (dominatesExits || isDeadAtExit)) && dominatesUsers) {
             instr->moveBefore(preheader->getTerminator());
             movedInstructions.insert(instr);
         }
