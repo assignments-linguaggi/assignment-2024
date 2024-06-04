@@ -11,76 +11,67 @@
 #include <vector>
 
 using namespace llvm;
-
-bool LoopFusion::isAdjacencyRespected(const Loop* firstLoop, const Loop* secondLoop) const {
-    const BasicBlock* firstLoopExitBlock = firstLoop->getExitBlock();
-    const BasicBlock* secondLoopPreheader = secondLoop->getLoopPreheader();
-    if (firstLoopExitBlock != nullptr && secondLoopPreheader != nullptr && secondLoopPreheader->size() == 1 && firstLoopExitBlock == secondLoopPreheader)
+bool LoopFusion::areLoopsSequential(const Loop* firstLoop, const Loop* secondLoop) const {
+    const BasicBlock* firstExitBlock = firstLoop->getExitBlock();
+    const BasicBlock* secondPreheader = secondLoop->getLoopPreheader();
+    if (firstExitBlock && secondPreheader && secondPreheader->size() == 1 && firstExitBlock == secondPreheader) {
         return true;
-    return false;   
-}
-
-void LoopFusion::findAdjacentLoops(const std::vector<Loop*>& loops, std::vector<std::pair<Loop*, Loop*>>& adjLoopPairs) const {
-    std::vector<const std::vector<Loop*>*> subLoopsVec;
-
-    for (const Loop* loop : loops) {
-        const std::vector<Loop*>& subLoops = loop->getSubLoops();
-        if (subLoops.size() > 1) {
-            subLoopsVec.push_back(&subLoops);
-        }
     }
-
-    for (const auto* subLoops : subLoopsVec) {
-        findAdjacentLoops(*subLoops, adjLoopPairs);
-    }
-
-    for (size_t i = 0; i+1 < loops.size(); i++) {
-        Loop* firstLoop = loops[i];
-        Loop* secondLoop = loops[i+1];
-        if (isAdjacencyRespected(firstLoop, secondLoop)) {
-            outs() << "Pair of adjacent loops detected:\n";
-            
-            outs() << "1st: ";
-            firstLoop->print(outs(), false, false);
-            outs() << "\n";
-
-            outs() << "2nd: ";
-            secondLoop->print(outs(), false, false);
-            outs() << "\n";
-
-            adjLoopPairs.emplace_back(firstLoop, secondLoop);
-        }
-    }
-}
-
-bool LoopFusion::isPairCFEquivalent(DominatorTree& domTree, PostDominatorTree& postDomTree, const Loop* firstLoop, const Loop* secondLoop) const {
-    if (domTree.dominates(firstLoop->getHeader(), secondLoop->getHeader()) && postDomTree.dominates(secondLoop->getHeader(), firstLoop->getHeader()))
-        return true;
     return false;
 }
 
-PreservedAnalyses LoopFusion::run(Function& function, FunctionAnalysisManager& fam) {
-    LoopInfo& loopInfo = fam.getResult<LoopAnalysis>(function);
-    DominatorTree& domTree = fam.getResult<DominatorTreeAnalysis>(function);
-    PostDominatorTree& postDomTree = fam.getResult<PostDominatorTreeAnalysis>(function);
+void LoopFusion::findSequentialLoops(const std::vector<Loop*>& loopList, std::vector<std::pair<Loop*, Loop*>>& sequentialLoopPairs) const {
+    for (size_t i = 0; i < loopList.size(); ++i) {
+        const std::vector<Loop*>& subLoops = loopList[i]->getSubLoopsVector();
+        if (subLoops.size() > 1) {
+            findSequentialLoops(subLoops, sequentialLoopPairs);
+        }
+    }
+
+    for (size_t i = 1; i < loopList.size(); ++i) {
+        Loop* previousLoop = loopList[i - 1];
+        Loop* currentLoop = loopList[i];
+
+        if (areLoopsSequential(previousLoop, currentLoop)) {
+            outs() << "Found sequential loops:\n";
+            outs() << " - Loop ";
+            previousLoop->print(outs(), /*Verbose=*/false);
+            outs() << "\n - Loop ";
+            currentLoop->print(outs(), /*Verbose=*/false);
+            outs() << "\n";
+            sequentialLoopPairs.emplace_back(previousLoop, currentLoop);
+        }
+    }
+}
+
+bool LoopFusion::verifyControlFlow(DominatorTree& domTree, PostDominatorTree& postDomTree, const Loop* loop1, const Loop* loop2) const {
+    return domTree.dominates(loop1->getHeader(), loop2->getHeader()) && postDomTree.dominates(loop2->getHeader(), loop1->getHeader());
+}
+
+PreservedAnalyses LoopFusion::run(Function& function, FunctionAnalysisManager& analysisManager) {
+    outs() << "Running LoopFusion Pass\n";
+
+    PostDominatorTree& postDomTree = analysisManager.getResult<PostDominatorTreeAnalysis>(function);
+    DominatorTree& domTree = analysisManager.getResult<DominatorTreeAnalysis>(function);
+    LoopInfo& loopInfo = analysisManager.getResult<LoopAnalysis>(function);
+
     const std::vector<Loop*>& topLevelLoops = loopInfo.getTopLevelLoops();
-    std::vector<Loop*> topLevelLoopsInPreorder(topLevelLoops.rbegin(), topLevelLoops.rend());
-    std::vector<std::pair<Loop*, Loop*>> adjacentLoops;
+    std::vector<Loop*> reversedLoops(topLevelLoops.rbegin(), topLevelLoops.rend());
+    std::vector<std::pair<Loop*, Loop*>> sequentialLoopPairs;
 
-    findAdjacentLoops(topLevelLoops, adjacentLoops);
+    findSequentialLoops(reversedLoops, sequentialLoopPairs);
 
-    for (const auto& pair : adjacentLoops) {
-        Loop* firstLoop = pair.first;
-        Loop* secondLoop = pair.second;
-        bool cfe = isPairCFEquivalent(domTree, postDomTree, firstLoop, secondLoop);
-        outs() << "Control Flow Equivalence for loops:\n";
-        outs() << "1st: ";
-        firstLoop->print(outs(), false, false);
+    for (const auto& loopPair : sequentialLoopPairs) {
+        Loop* loop1 = loopPair.first;
+        Loop* loop2 = loopPair.second;
+        bool equivalentControlFlow = verifyControlFlow(domTree, postDomTree, loop1, loop2);
+        outs() << "Control Flow Equivalence check:\n";
+        outs() << " - Loop ";
+        loop1->print(outs(), /*Verbose=*/false);
+        outs() << "\n - Loop ";
+        loop2->print(outs(), /*Verbose=*/false);
         outs() << "\n";
-        outs() << "2nd: ";
-        secondLoop->print(outs(), false, false);
-        outs() << "\n";
-        outs() << (cfe ? "Equivalent\n" : "Not Equivalent\n");
+        outs() << (equivalentControlFlow ? "Equivalent\n" : "Not Equivalent\n");
     }
 
     return PreservedAnalyses::none();

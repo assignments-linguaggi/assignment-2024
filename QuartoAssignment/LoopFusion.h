@@ -15,9 +15,9 @@ namespace llvm {
 
 class LoopFusion : public PassInfoMixin<LoopFusion> {
 public:
-    bool isAdjacencyRespected(const Loop*, const Loop*) const;
-    void findAdjacentLoops(const std::vector<Loop*>& loops, std::vector<std::pair<Loop*, Loop*>>& adjLoopPairs) const;
-    bool isPairCFEquivalent(DominatorTree& domTree, PostDominatorTree& postDomTree, const Loop* loopi, const Loop* loopj) const;
+    bool areLoopsSequential(const Loop*, const Loop*) const;
+    void findSequentialLoops(const std::vector<Loop*>& loops, std::vector<std::pair<Loop*, Loop*>>& seqLoopPairs) const;
+    bool verifyControlFlow(DominatorTree& DT, PostDominatorTree& PT, const Loop* loop1, const Loop* loop2) const;
     PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
