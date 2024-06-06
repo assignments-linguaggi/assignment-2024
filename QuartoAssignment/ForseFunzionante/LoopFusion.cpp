@@ -101,38 +101,36 @@ bool LoopFusion::noNegativeDistanceDependencies(const Loop* loop1, const Loop* l
 }
 
 void LoopFusion::performLoopFusion(Loop* firstLoop, Loop* secondLoop) {
-    // 1. Modifica degli usi della variabile di induzione
-    Value* firstIndVar = firstLoop->getCanonicalInductionVariable();
-    Value* secondIndVar = secondLoop->getCanonicalInductionVariable();
-    
-    for (auto& U : secondIndVar->uses()) {
-        if (auto* User = dyn_cast<Instruction>(U.getUser())) {
-            User->replaceUsesOfWith(secondIndVar, firstIndVar);
-        }
-    }
+    outs()<<"Unifying loops induction variables...\n";
+    PHINode* current_iv = firstLoop->getCanonicalInductionVariable();
+    PHINode* next_iv = secondLoop->getCanonicalInductionVariable();
+    next_iv->replaceAllUsesWith(current_iv);
+    next_iv->eraseFromParent();
+    outs()<<"Merging loops...\n";
+    BasicBlock* header_current = firstLoop->getHeader();
+    BasicBlock* header_next = secondLoop->getHeader();
 
-    // 2. Modifica del CFG
-    BasicBlock* firstExitBlock = firstLoop->getExitBlock();
-    BasicBlock* secondPreheader = secondLoop->getLoopPreheader();
-    BasicBlock* secondHeader = secondLoop->getHeader();
-    
-    BranchInst* secondLatchBranch = dyn_cast<BranchInst>(secondHeader->getTerminator());
-    if (secondLatchBranch && secondLatchBranch->isUnconditional()) {
-        BasicBlock* secondLatchTarget = secondLatchBranch->getSuccessor(0);
-        
-        // Rimuovi il salto all'uscita del primo loop
-        firstExitBlock->removePredecessor(secondLatchTarget);
+    BasicBlock* body_current = header_current->getTerminator()->getSuccessor(0);
+    BasicBlock* body_next = header_next->getTerminator()->getSuccessor(0);
 
-        // Rimuovi l'header del secondo loop dai predecessori dell'uscita del primo loop
-        secondPreheader->getTerminator()->eraseFromParent();
-        secondPreheader->getTerminator()->removeFromParent();
-        secondPreheader->replaceSuccessorsPhiUsesWith(secondHeader, firstExitBlock);
+    BasicBlock* latch_current = firstLoop->getLoopLatch();
+    BasicBlock* latch_next = secondLoop->getLoopLatch();
 
-        // Collega il corpo del secondo loop al corpo del primo loop
-        secondLatchBranch->setSuccessor(0, firstExitBlock);
-        BranchInst::Create(firstExitBlock, secondHeader);
-    }
+    BasicBlock* exit_next = secondLoop->getExitBlock();
+
+    //connessioni
+    body_current->getTerminator()->setSuccessor(0,body_next); //connetto il body di L1 al Body di L2
+    header_current->getTerminator()->setSuccessor(1, exit_next); //connetto l'header di L1 all'exit di L2
+    body_next->getTerminator()->setSuccessor(0, latch_current); //connetto il body di L2 al Latch di L1
+    header_next->getTerminator()->setSuccessor(0, latch_next); //connetto l'header di L2 al latch di L2
+
+    printLoop(*firstLoop, outs());
+
+
 }
+
+
+
 
 
 PreservedAnalyses LoopFusion::run(Function& function, FunctionAnalysisManager& analysisManager) {
@@ -186,10 +184,6 @@ PreservedAnalyses LoopFusion::run(Function& function, FunctionAnalysisManager& a
 
         performLoopFusion(loop1, loop2);
 
-        // Aggiungi un output di debug per vedere il nuovo loop dopo la fusione
-        outs() << "New loop after fusion:\n";
-        loop1->print(outs(), /*Verbose=*/true);
-        outs() << "\n";
     }
 
     return PreservedAnalyses::all();
