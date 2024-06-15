@@ -1,5 +1,5 @@
 
-# Soluzione Esercizio 2
+# Soluzione Esercizio 1
 ## Traccia
 <img style="width:20rem" src="./imgs/Screenshot 2024-04-29 alle 15.21.01.png" alt="">
 Per il programma riportato, già diviso in Basic Blocks, occorre:
